@@ -1,0 +1,9 @@
+name = "MKLOpenBLAS64"
+uuid = "bd185ef0-fc89-49d2-9579-127789ab5af0"
+authors = ["Kyungmin Lee <kyungmin.lee.42@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+CMake = "631607c0-34d2-5d66-819e-eb0f9aa2061a"
+Clang = "40e3b903-d033-50b4-a0cc-940c62c95e31"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
