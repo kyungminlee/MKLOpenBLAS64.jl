@@ -17,5 +17,3 @@ mkl_headers = [
     # "/usr/include/x86_64-linux-gnu/openblas64-openmp/f77blas.h",
     # "/usr/include/lapack.h",
 ]
-
-julia_root = "/home/kyungminlee/.local/pkg/julia-1.5.3"
