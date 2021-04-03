@@ -105,7 +105,7 @@ function main()
         end
     end
 
-    open(joinpath(builddir, "options.cmake", "w") do outfp
+    open(joinpath(builddir, "options.cmake"), "w") do outfp
         write(outfp, """
         set(MKL_INCLUDE_PATH "/usr/include/mkl")
         set(MKL_LIBRARIES
