@@ -24,7 +24,7 @@ endif()
 
 
 # ======= build =======
-add_library(mklopenblas64_ SHARED "${CMAKE_SOURCE_DIR}/src/mklopenblas64.c" "${CMAKE_SOURCE_DIR}/src/mklopenblas64-util.c")
+add_library(mklopenblas64_ SHARED "${CMAKE_SOURCE_DIR}/mklopenblas64.c" "${CMAKE_SOURCE_DIR}/mklopenblas64-util.c")
 set_target_properties(mklopenblas64_ PROPERTIES PREFIX "lib")  # For Windows
 
 target_include_directories(mklopenblas64_
