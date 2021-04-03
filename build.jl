@@ -1,9 +1,11 @@
 using MKLOpenBLAS64
 using TOML
 using Clang
-using CMake
+using CMakeWrapper
+using Libdl
 
 srcdir = "src"
+builddir = "./build"
 
 util_list = [
     "openblas_get_config64_",
@@ -21,11 +23,27 @@ util_list = [
     "lapack_make_complex_float64_",
 ]
 
+function get_openblas64_path()
+    for x in dllist()
+        if occursin("openblas64_", x)
+            return x
+        end
+    end
+    return nothing
+end
+
+
 function main()
     config = TOML.parsefile("config.toml")
     mkl_headers = config["mkl_headers"]
     mkl_libraries = config["mkl_libraries"]
-    julia_root = config["julia_root"]
+
+    if !ispath(builddir)
+        mkpath(builddir; force=true)
+    end
+    cp(joinpath(srcdir, "mklopenblas64.h"), joinpath(builddir, "mklopenblas64.h"); force=true)
+    cp(joinpath(srcdir, "mklopenblas64-util.c"), joinpath(builddir, "mklopenblas64-util.c"); force=true)
+    cp(joinpath(srcdir, "CMakeLists.txt"), joinpath(builddir, "CMakeLists.txt"); force=true)
 
     trans_units = parse_mkl_headers(mkl_headers)
 
@@ -39,15 +57,17 @@ function main()
         end
     end
 
-    openblas64_exports = get_symbol_list("$julia_root/lib/julia/libopenblas64_.so")
+    openblas64_path = get_openblas64_path()
+    openblas64_exports = get_symbol_list(openblas64_path)
     ilp64_exports = vcat([get_symbol_list(lib; dynamic=false) for lib in mkl_libraries]...)
 
     missing_caller_list = String[]
-    open("$(srcdir)/mklopenblas64.c", "w") do outfp
+    open("$(builddir)/mklopenblas64.c", "w") do outfp
         println(outfp, "#include \"mklopenblas64.h\"")
 
         for caller in openblas64_exports
             endswith(caller, "64_") || continue # only wrap functions that end with 64_. No internal functions
+            in(caller, util_list) && continue
 
             caller_stem = get_stem(caller)
             if !haskey(callee_decl_list, caller_stem)
@@ -84,7 +104,7 @@ function main()
         end
     end
 
-    open("options.cmake", "w") do outfp
+    open("$builddir/options.cmake", "w") do outfp
         write(outfp, """
         set(MKL_INCLUDE_PATH "/usr/include/mkl")
         set(MKL_LIBRARIES
@@ -93,10 +113,6 @@ function main()
         for mkl_lib in mkl_libraries
             write(outfp, "$mkl_lib\n")
         end
-            # /usr/lib/x86_64-linux-gnu/libmkl_gf_ilp64.a
-            # /usr/lib/x86_64-linux-gnu/libmkl_gnu_thread.a
-            # /usr/lib/x86_64-linux-gnu/libmkl_core.a
-            # /usr/lib/x86_64-linux-gnu/liblapacke64.a
         write(outfp, """
             "-Wl,--end-group"
             -lgomp -lpthread -lm -ldl
@@ -111,11 +127,8 @@ function main()
             @info m
         end
     end
-
-    run(Cmd([CMake.cmake, "-B", "build", "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX=stage"]))
-    run(Cmd([CMake.cmake, "--build", "build", "--target", "install", "--config", "Debug"]))
-
+    run(Cmd([CMakeWrapper.cmake_executable, "$builddir", "-B", "$builddir", "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX=stage"]))
+    run(Cmd([CMakeWrapper.cmake_executable, "--build", "$builddir", "--target", "install", "--config", "Release"]))
 end
-
 
 main()
