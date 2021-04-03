@@ -39,7 +39,7 @@ function main()
     mkl_libraries = config["mkl_libraries"]
 
     if !ispath(builddir)
-        mkpath(builddir; force=true)
+        mkpath(builddir)
     end
     cp(joinpath(srcdir, "mklopenblas64.h"), joinpath(builddir, "mklopenblas64.h"); force=true)
     cp(joinpath(srcdir, "mklopenblas64-util.c"), joinpath(builddir, "mklopenblas64-util.c"); force=true)
@@ -63,7 +63,7 @@ function main()
     ilp64_exports = vcat([get_symbol_list(lib; dynamic=false) for lib in mkl_libraries]...)
 
     missing_caller_list = String[]
-    open(joinpath(builddir, "mklopenblas64.c", "w") do outfp
+    open(joinpath(builddir, "mklopenblas64.c"), "w") do outfp
         println(outfp, "#include \"mklopenblas64.h\"")
 
         for caller in openblas64_exports
