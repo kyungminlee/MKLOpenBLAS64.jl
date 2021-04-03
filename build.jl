@@ -58,11 +58,12 @@ function main()
     end
 
     openblas64_path = get_openblas64_path()
+    isnothing(openblas64_path) && error("Julia's openblas library not found")
     openblas64_exports = get_symbol_list(openblas64_path)
     ilp64_exports = vcat([get_symbol_list(lib; dynamic=false) for lib in mkl_libraries]...)
 
     missing_caller_list = String[]
-    open("$(builddir)/mklopenblas64.c", "w") do outfp
+    open(joinpath(builddir, "mklopenblas64.c", "w") do outfp
         println(outfp, "#include \"mklopenblas64.h\"")
 
         for caller in openblas64_exports
@@ -104,7 +105,7 @@ function main()
         end
     end
 
-    open("$builddir/options.cmake", "w") do outfp
+    open(joinpath(builddir, "options.cmake", "w") do outfp
         write(outfp, """
         set(MKL_INCLUDE_PATH "/usr/include/mkl")
         set(MKL_LIBRARIES
@@ -127,8 +128,8 @@ function main()
             @info m
         end
     end
-    run(Cmd([CMakeWrapper.cmake_executable, "$builddir", "-B", "$builddir", "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX=stage"]))
-    run(Cmd([CMakeWrapper.cmake_executable, "--build", "$builddir", "--target", "install", "--config", "Release"]))
+    run(Cmd([CMakeWrapper.cmake_executable, builddir, "-B", builddir, "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX=stage"]))
+    run(Cmd([CMakeWrapper.cmake_executable, "--build", builddir, "--target", "install", "--config", "Release"]))
 end
 
 main()
