@@ -127,6 +127,11 @@ function main()
         for m in missing_caller_list
             @info m
         end
+        open(joinpath(builddir, "missing.log"), "w") do outfp
+            for m in missing_caller_list
+                println(outfp, m)
+            end
+        end
     end
     run(Cmd([CMakeWrapper.cmake_executable, builddir, "-B", builddir, "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX=stage"]))
     run(Cmd([CMakeWrapper.cmake_executable, "--build", builddir, "--target", "install", "--config", "Release"]))
