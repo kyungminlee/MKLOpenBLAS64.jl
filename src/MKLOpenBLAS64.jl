@@ -20,22 +20,66 @@ function parse_mkl_headers(mkl_headers)
 end
 
 function get_symbol_list(libpath::AbstractString; dynamic::Bool=false)
-    if dynamic
-        text = read(`nm -D "$(libpath)"`, String)
+    if Sys.iswindows()
+        if dynamic
+            text = read(`"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.28.29910\\bin\\HostX64\\x64\\dumpbin.exe" /exports "$(libpath)"`, String)
+            lines = [strip(l) for l in split(text, "\n")]
+            symbol_list = String[]
+            for l in lines
+                tokens = split(l)
+                # @show l
+                # @show tokens
+                length(tokens) == 4 || continue
+                try
+                    parse(Int, tokens[1])
+                    parse(Int, tokens[2]; base=16)
+                    parse(Int, tokens[3]; base=16)
+                    push!(symbol_list, tokens[4])
+                catch
+                end
+            end
+            return symbol_list
+        else
+            text = read(`"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.28.29910\\bin\\HostX64\\x64\\dumpbin.exe" /exports /symbols "$(libpath)"`, String)
+            lines = [strip(l) for l in split(text, "\n")]
+            symbol_list = String[]
+            for l in lines
+                tokens = split(l)
+                # @show l
+                # @show tokens
+                length(tokens) == 8 || continue
+                try
+                    parse(Int, tokens[1]; base=16)
+                    parse(Int, tokens[2]; base=16)
+                    tokens[3] == "SECT1" || continue
+                    tokens[4] == "notype" || continue
+                    tokens[5] == "()" || continue
+                    tokens[6] == "External" || continue
+                    tokens[7] == "|" || continue
+                    push!(symbol_list, tokens[8])
+                catch
+                end
+            end
+            return symbol_list
+        end
     else
-        text = read(`nm "$(libpath)"`, String)
+        if dynamic
+            text = read(`nm -D "$(libpath)"`, String)
+        else
+            text = read(`nm "$(libpath)"`, String)
+        end
+        lines = [l for l in split(text, "\n") if length(l) >= 18 && l[18] == 'T']
+        symbol_table = [tuple(split(l, " ")...) for l in lines]
+        return [symbol_name
+            for (symbol_address, symbol_type, symbol_name) in symbol_table
+                if symbol_type == "T" || symbol_type == "t"
+        ]
     end
-    lines = [l for l in split(text, "\n") if length(l) >= 18 && l[18] == 'T']
-    symbol_table = [tuple(split(l, " ")...) for l in lines]
-    return [symbol_name
-        for (symbol_address, symbol_type, symbol_name) in symbol_table
-            if symbol_type == "T" || symbol_type == "t"
-    ]
 end
 
 function get_stem(openblas64_symbol::AbstractString)
-    # sym = lowercase(openblas64_symbol)
-    sym = openblas64_symbol
+    sym = lowercase(openblas64_symbol)
+    # sym = openblas64_symbol
     if endswith(sym, "_64_")
         sym = sym[1:end-4]
     elseif endswith(sym, "64_")
