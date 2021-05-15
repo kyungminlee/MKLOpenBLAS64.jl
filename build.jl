@@ -68,6 +68,7 @@ function main()
     @info "ilp64 exports: $(length(ilp64_exports))"
 
     missing_caller_list = String[]
+    export_count = 0
     open(joinpath(builddir, "mklopenblas64.c"), "w") do outfp
         println(outfp, "#include \"mklopenblas64.h\"")
 
@@ -100,7 +101,6 @@ function main()
             fparams = join(["$t $a" for (t, a) in zip(callee_decl.param_types, callee_decl.param_names)], ", ")
             fargs = join(["$a" for a in callee_decl.param_names], ", ")
 
-            @info "exporting $caller"
             println(outfp, """
             API_EXPORT
             $(callee_decl.return_type)
@@ -109,39 +109,37 @@ function main()
                 $(ret)$(callee_decl.name)($fargs);
             }
             """)
+            export_count += 1
         end
     end
 
-    #=
-    open(joinpath(builddir, "options.cmake"), "w") do outfp
-        write(outfp, """
-        set(MKL_INCLUDE_PATH "/usr/include/mkl")
-        set(MKL_LIBRARIES
-            "-Wl,--start-group"
-        """)
-        for mkl_lib in mkl_libraries
-            write(outfp, "$mkl_lib\n")
-        end
-        write(outfp, """
-            "-Wl,--end-group"
-            -lgomp -lpthread -lm -ldl
-        )
-        """)
+    @info "Exported $export_count functions"
+
+    if Sys.iswindows()
+        start_group = ""
+        end_group = ""
+        additional_flags = ""
+    else
+        start_group = "-Wl,--start-group"
+        end_group = "-Wl,--end-group"
+        additional_flags = "-lgomp -lpthread -lm -ldl"
     end
-    =#
 
     open(joinpath(builddir, "options.cmake"), "w") do outfp
         include_path = replace(join(config["mkl_include_dirs"], ";"), "\\"=>"\\\\")
         write(outfp, """
-              set(MKL_INCLUDE_PATH "$(include_path)")
-        set(MKL_LIBRARIES
-        """)
+            set(MKL_INCLUDE_PATH "$(include_path)")
+            set(MKL_LIBRARIES
+                $start_group
+            """)
         for mkl_lib in mkl_libraries
             write(outfp, "\"$(replace(mkl_lib, "\\"=>"\\\\"))\"\n")
         end
         write(outfp, """
-        )
-        """)
+                $end_group
+                $additional_flags
+            )
+            """)
     end
 
     # missing_caller_list = [x for x in missing_caller_list if x ∉ util_list]
