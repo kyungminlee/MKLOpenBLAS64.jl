@@ -57,10 +57,15 @@ function main()
         end
     end
 
+    @info "callee_decl_list: $(length(callee_decl_list))"
+
     openblas64_path = get_openblas64_path()
     isnothing(openblas64_path) && error("Julia's openblas library not found")
-    openblas64_exports = get_symbol_list(openblas64_path)
+    openblas64_exports = get_symbol_list(openblas64_path; dynamic=true)
     ilp64_exports = vcat([get_symbol_list(lib; dynamic=false) for lib in mkl_libraries]...)
+
+    @info "openblas64 exports: $(length(openblas64_exports))"
+    @info "ilp64 exports: $(length(ilp64_exports))"
 
     missing_caller_list = String[]
     open(joinpath(builddir, "mklopenblas64.c"), "w") do outfp
@@ -72,6 +77,7 @@ function main()
 
             caller_stem = get_stem(caller)
             if !haskey(callee_decl_list, caller_stem)
+                @warn "$(caller_stem) missing"
                 push!(missing_caller_list, caller)
                 continue
             end
@@ -94,6 +100,7 @@ function main()
             fparams = join(["$t $a" for (t, a) in zip(callee_decl.param_types, callee_decl.param_names)], ", ")
             fargs = join(["$a" for a in callee_decl.param_names], ", ")
 
+            @info "exporting $caller"
             println(outfp, """
             API_EXPORT
             $(callee_decl.return_type)
@@ -105,6 +112,7 @@ function main()
         end
     end
 
+    #=
     open(joinpath(builddir, "options.cmake"), "w") do outfp
         write(outfp, """
         set(MKL_INCLUDE_PATH "/usr/include/mkl")
@@ -117,6 +125,21 @@ function main()
         write(outfp, """
             "-Wl,--end-group"
             -lgomp -lpthread -lm -ldl
+        )
+        """)
+    end
+    =#
+
+    open(joinpath(builddir, "options.cmake"), "w") do outfp
+        include_path = replace(join(config["mkl_include_dirs"], ";"), "\\"=>"\\\\")
+        write(outfp, """
+              set(MKL_INCLUDE_PATH "$(include_path)")
+        set(MKL_LIBRARIES
+        """)
+        for mkl_lib in mkl_libraries
+            write(outfp, "\"$(replace(mkl_lib, "\\"=>"\\\\"))\"\n")
+        end
+        write(outfp, """
         )
         """)
     end
