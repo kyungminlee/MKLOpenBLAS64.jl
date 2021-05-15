@@ -1,0 +1,19 @@
+mkl_libraries = [
+    "/usr/lib/x86_64-linux-gnu/libmkl_core.a",
+    "/usr/lib/x86_64-linux-gnu/libmkl_gf_ilp64.a",
+    "/usr/lib/x86_64-linux-gnu/libmkl_gnu_thread.a",
+    "/usr/lib/x86_64-linux-gnu/liblapacke64.a",
+]
+mkl_include_dirs = ["/usr/include/mkl"]
+mkl_headers = [
+    "/usr/include/mkl/mkl_blas.h",
+    "/usr/include/mkl/mkl_cblas.h",
+    "/usr/include/mkl/mkl_lapack.h",
+    "/usr/include/mkl/mkl_lapacke.h",
+    "/usr/include/mkl/mkl_trans.h",
+    # "/usr/include/lapacke_utils.h",
+    # "/usr/include/lapacke.h",
+    # "/usr/include/x86_64-linux-gnu/openblas64-openmp/cblas.h",
+    # "/usr/include/x86_64-linux-gnu/openblas64-openmp/f77blas.h",
+    # "/usr/include/lapack.h",
+]
